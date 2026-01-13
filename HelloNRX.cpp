@@ -387,64 +387,6 @@ void exportArmatureTable()
     }
 }
 
-// Установка параметра KKS_PART для выбранных объектов
-void setKKSPartForSelection()
-{
-    try
-    {
-        // Получение множества выделения
-        ads_name ss;
-        if (acedSSGet(nullptr, nullptr, nullptr, nullptr, ss) != RTNORM)
-        {
-            acutPrintf(L"\nОбъекты не выбраны.");
-            return;
-        }
-
-        NRX::Int32 len = 0;
-        NRX::Int32* pLen = &len;
-        if (acedSSLength(ss, pLen) != RTNORM || len <= 0)
-        {
-            acedSSFree(ss);
-            acutPrintf(L"\nПустое множество.");
-            return;
-        }
-
-        // Запрос значения KKS_PART (пустая строка допускается)
-        wchar_t buf[256] = { 0 };
-        int rc = acedGetString(0, L"\nВведите KKS_PART: ", buf);
-        if (rc != RTNORM)
-        {
-            acedSSFree(ss);
-            acutPrintf(L"\nОтменено.");
-            return;
-        }
-        CString kks(buf);
-
-        int updated = 0;
-        for (NRX::Int32 i = 0; i < len; ++i)
-        {
-            ads_name entName;
-            if (acedSSName(ss, i, entName) != RTNORM)
-                continue;
-
-            AcDbObjectId id;
-            if (acdbGetObjectId(id, entName) != Acad::eOk)
-                continue;
-
-            CElement params;
-            params.SetParameter(L"KKS_PART", kks, L"", L"");
-            if (ursSetObjectParameters(id, params, false))
-                ++updated;
-        }
-
-        acedSSFree(ss);
-        acutPrintf(L"\nНазначено KKS_PART='%s' объектам: %d", kks.GetString(), updated);
-    }
-    catch (...)
-    {
-        acutPrintf(L"\nОшибка при назначении KKS_PART.");
-    }
-}
 } // namespace
 
 /**
@@ -1446,11 +1388,6 @@ extern "C" __declspec(dllexport) AcRx::AppRetCode ncrxEntryPoint(AcRx::AppMsgCod
         acedRegCmds->addCommand(L"PIPE_TEST_GROUP",
             L"_EXPORTARMATURE", L"EXPORTARMATURE",
             ACRX_CMD_MODAL, exportArmatureTable);
-
-        // Регистрируем команду для назначения KKS_PART выбранным объектам
-        acedRegCmds->addCommand(L"PIPE_TEST_GROUP",
-            L"_SETKKS", L"SETKKS",
-            ACRX_CMD_MODAL, setKKSPartForSelection);
         break;
 
     case AcRx::kUnloadAppMsg:
